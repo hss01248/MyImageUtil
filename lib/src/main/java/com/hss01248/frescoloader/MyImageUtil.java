@@ -35,14 +35,13 @@ public class MyImageUtil {
         }
 
        String  newUrl = QiniuUtils.getSamllImage(url,width,height,QiniuUtils.isWWW,true);
-
         FrescoUtilsForQiniu.loadUrl(newUrl,view,null,width,height,null);
-
     }
+
+
 
     public static void show(SimpleDraweeView view, String url){
         FrescoUtilsForQiniu.measureView(view);
-
         int height = view.getMeasuredHeight();
         int width = view.getMeasuredWidth();
 
