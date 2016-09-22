@@ -55,9 +55,9 @@ import java.util.UUID;
  *
  *
  */
-public class FrescoUtils {
+public class FrescoUtilsForQiniu {
 
-    private static int screenWidth;
+    public static int screenWidth;
 
     private static final String PHOTO_FRESCO = "frescocache";
 
@@ -70,7 +70,7 @@ public class FrescoUtils {
      * @param context
      * @param cacheSizeInM  磁盘缓存的大小，以M为单位
      */
-    public static void init(final Context context,int cacheSizeInM){
+    public static void init(final Context context,int cacheSizeInM,int padding){
 
 
         DiskCacheConfig diskCacheConfig = DiskCacheConfig.newBuilder(context)
@@ -96,7 +96,12 @@ public class FrescoUtils {
         WindowManager wm = (WindowManager) context.getSystemService(
                 Context.WINDOW_SERVICE);
         Display display = wm.getDefaultDisplay();
-        screenWidth = display.getWidth();
+        screenWidth = display.getWidth() - dip2px(context,padding);
+    }
+
+    public static int dip2px(Context context, float dipValue){
+        final float scale = context.getResources().getDisplayMetrics().density;
+        return (int)(dipValue * scale + 0.5f);
     }
 
 
@@ -148,8 +153,6 @@ public class FrescoUtils {
     }*/
 
 
-
-
     /**
      *  If the image has some ResizeOptions we put also the resized image into the cache with different key.
      *  currently don't support downsampling / resizing for GIFs.
@@ -191,14 +194,21 @@ public class FrescoUtils {
 
     public static void load(Uri uri, @NonNull SimpleDraweeView draweeView, @Nullable BasePostprocessor processor, int width, int height,
                             @Nullable BaseControllerListener listener){
-        //通过draweeView拿到控件的宽高,而不用外部传入
-        measureView(draweeView);
 
-        //处理matchparent的情况:宽度设置为屏幕宽度减去两边的边距共30dp
-        if (draweeView.getMeasuredWidth() < 5){//matchparent
+        if (width ==0 && height == 0){//如果外部没有传入,那么通过draweeView拿到控件的宽高
 
+            measureView(draweeView);
+
+             height = draweeView.getMeasuredHeight();
+             width = draweeView.getMeasuredWidth();
+
+            //处理matchparent的情况:宽度设置为屏幕宽度减去两边的边距共30dp
+            if (width < 5){//matchparent时,width为1. todo 2k和4k屏的算法优化?  ResizeOptions指定短边?
+                width = screenWidth;
+            }
         }
-        //int actW = draweeView.getMeasuredHeight();
+
+
 
         ResizeOptions resizeOptions = null;
         if (width >0 && height > 0){
@@ -234,7 +244,7 @@ public class FrescoUtils {
      *
      *          将要预算的view传入measureView方法，再调用getMeasuredWidth()、getMeasuredHeight()就可以获得将来实际显示的宽高了。
      */
-    private static void measureView(View v) {
+    public static void measureView(View v) {
         ViewGroup.LayoutParams lp = v.getLayoutParams();
         if (lp == null) {
             return;
@@ -704,7 +714,7 @@ public class FrescoUtils {
                 e.printStackTrace();
                 return "";
             }
-         String type =   FrescoUtils2.bytesToHexString(b).toUpperCase();
+         String type =   FrescoUtilsForQiniu.bytesToHexString(b).toUpperCase();
             if(type.contains("FFD8FF")){
                 return "jpg";
             }else if(type.contains("89504E47")){
@@ -730,6 +740,25 @@ public class FrescoUtils {
 
 
 
+    }
+
+
+
+
+    public static String bytesToHexString(byte[] src) {
+        StringBuilder stringBuilder = new StringBuilder();
+        if (src == null || src.length <= 0) {
+            return null;
+        }
+        for (int i = 0; i < src.length; i++) {
+            int v = src[i] & 0xFF;
+            String hv = Integer.toHexString(v);
+            if (hv.length() < 2) {
+                stringBuilder.append(0);
+            }
+            stringBuilder.append(hv);
+        }
+        return stringBuilder.toString();
     }
 
 
