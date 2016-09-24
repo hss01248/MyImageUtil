@@ -55,11 +55,17 @@ import java.util.UUID;
  *
  *
  */
-public class FrescoUtilsForQiniu {
+public class FrescoUtil {
 
     public static int screenWidth;
 
     private static final String PHOTO_FRESCO = "frescocache";
+
+    public  static String test2BaseUrl = "";//测试服
+    public  static String test1BaseUrl = "";
+    public  static String wwwBaseUrl ="";
+
+    public static  boolean isWWW;//是否为正式服
 
     /**
      * 初始化操作，建议在子线程中进行
@@ -69,8 +75,16 @@ public class FrescoUtilsForQiniu {
      compile 'com.facebook.fresco:animated-gif:0.10.0'
      * @param context
      * @param cacheSizeInM  磁盘缓存的大小，以M为单位
+     * @param wwwBaseUrl
+     * @param test1BaseUrl
+     * @param test2BaseUrl
      */
-    public static void init(final Context context,int cacheSizeInM,int padding){
+    public static void init(final Context context, int cacheSizeInM, int padding, String wwwBaseUrl, String test1BaseUrl, String test2BaseUrl,boolean iswww){
+
+        FrescoUtil.wwwBaseUrl = wwwBaseUrl;
+        FrescoUtil.test1BaseUrl = test1BaseUrl;
+        FrescoUtil.test2BaseUrl = test2BaseUrl;
+        isWWW = iswww;
 
 
         DiskCacheConfig diskCacheConfig = DiskCacheConfig.newBuilder(context)
@@ -166,8 +180,23 @@ public class FrescoUtilsForQiniu {
     public static void loadUrl(String url, SimpleDraweeView draweeView, BasePostprocessor processor, int width, int height,
                                BaseControllerListener listener){
 
+        url = append(url);
        load(Uri.parse(url),draweeView,processor,width,height,listener);
 
+    }
+
+    private static String append(String url) {
+        String newUrl = url;
+        boolean hasHost = url.contains("http:" ) || url.contains("https:" )  ;
+        if (!hasHost){
+            if (isWWW){
+                newUrl = wwwBaseUrl + url;
+            }else {
+                newUrl = test1BaseUrl + url;
+            }
+        }
+
+        return newUrl;
     }
 
     public static void loadFile(String file, SimpleDraweeView draweeView, BasePostprocessor processor, int width, int height,
@@ -351,6 +380,7 @@ public class FrescoUtilsForQiniu {
      * @param url
      */
     public static void clearCacheByUrl(String url){
+        url = append(url);
         ImagePipeline imagePipeline = Fresco.getImagePipeline();
         Uri uri = Uri.parse(url);
        // imagePipeline.evictFromMemoryCache(uri);
@@ -364,6 +394,7 @@ public class FrescoUtilsForQiniu {
      * @param url
      */
     public static File getFileFromDiskCache(String url){
+        url = append(url);
         File localFile = null;
         if (!TextUtils.isEmpty(url)) {
             CacheKey cacheKey = DefaultCacheKeyFactory.getInstance().getEncodedCacheKey(ImageRequest.fromUri(url));
@@ -386,6 +417,7 @@ public class FrescoUtilsForQiniu {
      * @return
      */
     public static boolean copyCacheFile(String url,File dir,String fileName){
+        url = append(url);
         File path = new File(dir,fileName);
       return   copyCacheFile(url,path);
     }
@@ -420,7 +452,7 @@ public class FrescoUtilsForQiniu {
      * @return
      */
     public static File copyCacheFileToDir(String url,File dir){
-
+        url = append(url);
         if (dir == null ){
             return null;
         }
@@ -452,7 +484,7 @@ public class FrescoUtilsForQiniu {
      * @return 该url对应的图片是否已经缓存到本地
      */
     public static boolean isCached(String url) {
-
+        url = append(url);
       // return Fresco.getImagePipeline().isInDiskCache(Uri.parse(url));
 
         ImageRequest imageRequest = ImageRequest.fromUri(url);
@@ -481,6 +513,7 @@ public class FrescoUtilsForQiniu {
      * @param listener 自己定义的回调
      */
     public static void download(final String url, Context context, final File dir, final DownloadListener listener){
+
         ImageRequest imageRequest = ImageRequestBuilder.newBuilderWithSource(Uri.parse(url))
                 .build();
 
@@ -530,6 +563,7 @@ public class FrescoUtilsForQiniu {
      * @param listener
      */
     public static void getBitmap(String url, Context context, int width, int height, final BitmapListener listener){
+        url = append(url);
         getBitmapWithProcessor(url,context,width,height,null,listener);
     }
 
@@ -556,7 +590,7 @@ public class FrescoUtilsForQiniu {
      */
     public static void getBitmapWithProcessor(@NonNull final String url, @NonNull Context context, @NonNull final int width, @NonNull final int height,
                                               @Nullable BasePostprocessor processor, @NonNull final BitmapListener listener){
-
+        final String  finalUrl = append(url);
         ResizeOptions resizeOptions = null;
         if (width !=0 && height != 0 ){
             resizeOptions = new ResizeOptions(width, height);
@@ -577,7 +611,7 @@ public class FrescoUtilsForQiniu {
                 //注意，gif图片解码方法与普通图片不一样，是无法拿到bitmap的。如果要把gif的第一帧的bitmap返回，怎么做？
                 //GifImage.create(bytes).decode(1l,9).getFrameInfo(1).
                 if (bitmap == null ){
-                    File cacheFile  = getFileFromDiskCache(url);
+                    File cacheFile  = getFileFromDiskCache(finalUrl);
                     //还要判断文件是不是gif格式的
                     if ("gif".equalsIgnoreCase(getRealType(cacheFile))){
                             Bitmap bitmapGif = GifUtils.getBitmapFromGifFile(cacheFile);//拿到gif第一帧的bitmap
@@ -714,7 +748,7 @@ public class FrescoUtilsForQiniu {
                 e.printStackTrace();
                 return "";
             }
-         String type =   FrescoUtilsForQiniu.bytesToHexString(b).toUpperCase();
+         String type =   FrescoUtil.bytesToHexString(b).toUpperCase();
             if(type.contains("FFD8FF")){
                 return "jpg";
             }else if(type.contains("89504E47")){

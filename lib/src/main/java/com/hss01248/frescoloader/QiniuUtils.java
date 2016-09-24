@@ -6,9 +6,9 @@ import android.text.TextUtils;
  * Created by Administrator on 2016/6/14 0014.
  */
 public class QiniuUtils {
-    public final static String QINIU_TEST2 = "http://static-dev.qxinli.com/";//测试服
-    public final static String QINIU_TEST = "http://7xnwnf.com2.z0.glb.qiniucdn.com";
-    public final static String QINIU_WWW ="http://static.qxinli.com/";
+    public  static String QINIU_TEST2 = "";//测试服
+    public  static String QINIU_TEST = "";
+    public  static String QINIU_WWW ="";
     public static  boolean isWWW;//是否为正式服
 
 
@@ -102,7 +102,10 @@ public class QiniuUtils {
     }
 
 
-    public static void init(String www, String test1, String test2, boolean iswww) {
-
+    public static void init(String wwwBaseUrl, String test1BaseUrl, String test2BaseUrl, boolean iswww) {
+            QINIU_WWW = wwwBaseUrl;
+        QINIU_TEST = test1BaseUrl;
+        QINIU_TEST2 = test2BaseUrl;
+        isWWW = iswww;
     }
 }

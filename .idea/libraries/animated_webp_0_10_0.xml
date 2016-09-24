@@ -6,7 +6,7 @@
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="jar://D:/development/Android/setup/.gradle/caches/modules-2/files-2.1/com.facebook.fresco/animated-webp/0.10.0/e0e18c6b8140e4af2a1db50cb518fe2a98b57c30/animated-webp-0.10.0-sources.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.facebook.fresco/animated-webp/0.10.0/e0e18c6b8140e4af2a1db50cb518fe2a98b57c30/animated-webp-0.10.0-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

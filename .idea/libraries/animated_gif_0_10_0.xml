@@ -6,7 +6,7 @@
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="jar://D:/development/Android/setup/.gradle/caches/modules-2/files-2.1/com.facebook.fresco/animated-gif/0.10.0/73cb1ba7272c8073778d08041423a4de60c85555/animated-gif-0.10.0-sources.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.facebook.fresco/animated-gif/0.10.0/73cb1ba7272c8073778d08041423a4de60c85555/animated-gif-0.10.0-sources.jar!/" />
     </SOURCES>
   </library>
 </component>
