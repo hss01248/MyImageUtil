@@ -16,9 +16,9 @@ public class MyImageUtil {
     public static Context context;
     public static boolean isWWW;
 
-    public static void init(final Context context, int cacheSizeInM,int padding,
+    public static void init(final Context context, int cacheSizeInM,
                             String wwwBaseUrl,String test1BaseUrl,String test2BaseUrl,boolean iswww){
-        FrescoUtil.init(context,cacheSizeInM,padding, wwwBaseUrl, test1BaseUrl, test2BaseUrl,iswww);
+        FrescoUtil.init(context,cacheSizeInM);
         QiniuUtils.init(wwwBaseUrl,test1BaseUrl,test2BaseUrl,iswww);
         MyImageUtil.context = context;
         MyImageUtil.isWWW = iswww;

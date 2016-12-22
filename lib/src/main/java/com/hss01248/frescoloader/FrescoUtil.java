@@ -29,6 +29,7 @@ import com.facebook.drawee.backends.pipeline.PipelineDraweeController;
 import com.facebook.drawee.controller.BaseControllerListener;
 import com.facebook.drawee.generic.RoundingParams;
 import com.facebook.drawee.view.SimpleDraweeView;
+import com.facebook.imagepipeline.backends.okhttp3.OkHttpImagePipelineConfigFactory;
 import com.facebook.imagepipeline.cache.CountingMemoryCache;
 import com.facebook.imagepipeline.cache.DefaultCacheKeyFactory;
 import com.facebook.imagepipeline.cache.ImageCacheStatsTracker;
@@ -46,7 +47,20 @@ import com.facebook.imagepipeline.request.ImageRequestBuilder;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
+import okhttp3.OkHttpClient;
 
 
 /**
@@ -68,25 +82,24 @@ public class FrescoUtil {
     public static  boolean isWWW;//是否为正式服
 
     /**
-     * 初始化操作，建议在子线程中进行
+     * 初始化操作，在Application的onCreate方法中初始化,建议在子线程中进行
+     *
      * 添加的依赖：
-     *  compile 'com.facebook.fresco:fresco:0.10.0+'
-     compile 'com.facebook.fresco:animated-webp:0.10.0'
-     compile 'com.facebook.fresco:animated-gif:0.10.0'
+                 compile 'com.facebook.fresco:fresco:0.12.0'
+                 // 在 API < 14 上的机器支持 WebP 时，需要添加
+                 compile 'com.facebook.fresco:animated-base-support:0.12.0'
+                 // 支持 GIF 动图，需要添加
+                 compile 'com.facebook.fresco:animated-gif:0.12.0'
+                 // 支持 WebP （静态图+动图），需要添加
+                 compile 'com.facebook.fresco:animated-webp:0.12.0'
+                 compile 'com.facebook.fresco:webpsupport:0.12.0'
+                 compile "com.facebook.fresco:imagepipeline-okhttp3:0.12.0+"
      * @param context
      * @param cacheSizeInM  磁盘缓存的大小，以M为单位
-     * @param wwwBaseUrl
-     * @param test1BaseUrl
-     * @param test2BaseUrl
+
      */
-    public static void init(final Context context, int cacheSizeInM, int padding, String wwwBaseUrl, String test1BaseUrl, String test2BaseUrl,boolean iswww){
-
-        FrescoUtil.wwwBaseUrl = wwwBaseUrl;
-        FrescoUtil.test1BaseUrl = test1BaseUrl;
-        FrescoUtil.test2BaseUrl = test2BaseUrl;
-        isWWW = iswww;
-
-
+    public static void init(final Context context, int cacheSizeInM){
+        isWWW = true;
         DiskCacheConfig diskCacheConfig = DiskCacheConfig.newBuilder(context)
                 .setMaxCacheSize(cacheSizeInM*1024*1024)
                 .setBaseDirectoryName(PHOTO_FRESCO)
@@ -98,7 +111,13 @@ public class FrescoUtil {
                 })
                 .build();
         MyImageCacheStatsTracker imageCacheStatsTracker = new MyImageCacheStatsTracker();
-        ImagePipelineConfig config = ImagePipelineConfig.newBuilder(context)
+
+
+        OkHttpClient okHttpClient= getAllPassClient(context);
+
+
+        ImagePipelineConfig config = OkHttpImagePipelineConfigFactory.newBuilder(context,okHttpClient)
+       // ImagePipelineConfig config = ImagePipelineConfig.newBuilder(context)
                 .setMainDiskCacheConfig(diskCacheConfig)
                 .setImageCacheStatsTracker(imageCacheStatsTracker)
                 .setDownsampleEnabled(true)//Downsampling，它处理图片的速度比常规的裁剪更快，
@@ -110,8 +129,89 @@ public class FrescoUtil {
         WindowManager wm = (WindowManager) context.getSystemService(
                 Context.WINDOW_SERVICE);
         Display display = wm.getDefaultDisplay();
-        screenWidth = display.getWidth() - dip2px(context,padding);
+        screenWidth = display.getWidth() - dip2px(context,15);
     }
+
+
+    private static OkHttpClient getAllPassClient(Context context) {
+
+        X509TrustManager xtm = new X509TrustManager() {
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain, String authType) {
+            }
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String authType) {
+            }
+
+            @Override
+            public X509Certificate[] getAcceptedIssuers() {
+                X509Certificate[] x509Certificates = new X509Certificate[]{};
+                return x509Certificates;
+               // return null;
+            }
+        };
+
+        SSLContext sslContext = null;
+        try {
+            sslContext = SSLContext.getInstance("SSL");
+
+            sslContext.init(null, new TrustManager[]{xtm}, new SecureRandom());
+
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (KeyManagementException e) {
+            e.printStackTrace();
+        }
+
+
+        HostnameVerifier DO_NOT_VERIFY = new HostnameVerifier() {
+            @Override
+            public boolean verify(String hostname, SSLSession session) {
+                return true;
+            }
+        };
+
+        OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                .sslSocketFactory(sslContext.getSocketFactory())
+                .hostnameVerifier(DO_NOT_VERIFY)
+                .readTimeout(0, TimeUnit.SECONDS)
+                .connectTimeout(30, TimeUnit.SECONDS).writeTimeout(0, TimeUnit.SECONDS) //设置超时
+                .build();
+
+        return okHttpClient;
+
+      /*  OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        try {
+            CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+            KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            keyStore.load(null);
+            String certificateAlias = Integer.toString(0);
+            keyStore.setCertificateEntry(certificateAlias, certificateFactory.generateCertificate(context.getAssets().open("daodianwang.cer")));
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            final TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            trustManagerFactory.init(keyStore);
+            sslContext.init(null, trustManagerFactory.getTrustManagers(), new SecureRandom());
+            builder.sslSocketFactory(sslContext.getSocketFactory());
+            builder.hostnameVerifier(new HostnameVerifier() {
+                @Override
+                public boolean verify(String s, SSLSession sslSession) {
+                    return true;
+                }
+            });
+
+                    builder.readTimeout(0, TimeUnit.SECONDS)
+                            .connectTimeout(30, TimeUnit.SECONDS).writeTimeout(0, TimeUnit.SECONDS) //设置超时
+                            .retryOnConnectionFailure(false);
+
+
+        } catch (Exception e) {
+            // e.printStackTrace();
+        }
+        return builder.build();*/
+    }
+
+
 
     public static int dip2px(Context context, float dipValue){
         final float scale = context.getResources().getDisplayMetrics().density;
@@ -397,7 +497,7 @@ public class FrescoUtil {
         url = append(url);
         File localFile = null;
         if (!TextUtils.isEmpty(url)) {
-            CacheKey cacheKey = DefaultCacheKeyFactory.getInstance().getEncodedCacheKey(ImageRequest.fromUri(url));
+            CacheKey cacheKey = DefaultCacheKeyFactory.getInstance().getEncodedCacheKey(ImageRequest.fromUri(url),null);
             if (ImagePipelineFactory.getInstance().getMainFileCache().hasKey(cacheKey)) {
                 BinaryResource resource = ImagePipelineFactory.getInstance().getMainFileCache().getResource(cacheKey);
                 localFile = ((FileBinaryResource) resource).getFile();
@@ -489,7 +589,7 @@ public class FrescoUtil {
 
         ImageRequest imageRequest = ImageRequest.fromUri(url);
         CacheKey cacheKey = DefaultCacheKeyFactory.getInstance()
-                .getEncodedCacheKey(imageRequest);
+                .getEncodedCacheKey(imageRequest,null);
         return ImagePipelineFactory.getInstance()
                 .getMainFileCache().hasKey(cacheKey);
     }
